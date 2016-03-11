@@ -1,0 +1,25 @@
+{
+  "name": "runterry",
+  "authors": [
+    "Eunmi Han <orangeem1219@gmail.com>"
+  ],
+  "description": "Assignment 3 for Advanced Graphics",
+  "main": "",
+  "moduleType": [],
+  "license": "MIT",
+  "homepage": "https://github.com/em-graphics/RunTerry",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests",
+    "Scripts/lib"
+  ],
+  "dependencies": {
+    "three.js": "threejs#*",
+    "dat-gui": "~0.5.1",
+    "stats.js": "*",
+    "Physijs": "physijs#*"
+  }
+}
