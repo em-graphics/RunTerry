@@ -19,4 +19,5 @@ var objects;
     })();
     objects.Control = Control;
 })(objects || (objects = {}));
+
 //# sourceMappingURL=control.js.map
