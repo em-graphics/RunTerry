@@ -5,6 +5,7 @@ Date last Modified : Mar 11, 2016
 Program Description : Main controls 
 Revision History : 1.01 - Initial Setup(3.11) by E
                    1.02 - Add mouse controls(3.17) by E
+                   1.03 - Add items and texture(3.18)
                                       
 Last Modified by Eunmi Han
 */
@@ -40,6 +41,9 @@ import Face3 = THREE.Face3;
 import Point = objects.Point;
 import CScreen = config.Screen;
 import Clock = THREE.Clock;
+import PhongMaterial = THREE.MeshPhongMaterial;
+import Texture = THREE.Texture;
+import CylinderGeometry = THREE.CylinderGeometry;
 
 //Custom Game Objects
 import gameObject = objects.gameObject;
@@ -65,23 +69,49 @@ var game = (() => {
     var instructions: HTMLElement;
     var spotLight: SpotLight;
     var groundGeometry: CubeGeometry;
-    var groundMaterial: Physijs.Material;
+    var groundMaterial: PhongMaterial;
     var ground: Physijs.Mesh;
+    var groundTexture: Texture;
+    var groundPhysicsMaterial: Physijs.Material;
     var clock: Clock;
     var playerGeometry: CubeGeometry;
     var playerMaterial: Physijs.Material;
     var player: Physijs.Mesh;
-    var sphereGeometry: SphereGeometry;
-    var sphereMaterial: Physijs.Material;
-    var sphere: Physijs.Mesh;
+    var fenceGeometry: CubeGeometry;
+    var fenceMaterial: Physijs.Material;
+    var fence: Physijs.Mesh;
+    var stoneGeometry: SphereGeometry;
+    var stoneMaterial: PhongMaterial;
+    var stoneTexture: Texture;
+    var stone: Physijs.Mesh;
     var keyboardControls: objects.KeyboardControls;
     var mouseControls: objects.MouseControls;
     var isGrounded: boolean;
+    var isDied: boolean;
     var velocity: Vector3 = new Vector3(0, 0, 0);
     var prevTime: number = 0;
     var directionLineMaterial: LineBasicMaterial;
     var directionLineGeometry: Geometry;
     var directionLine: Line;
+    var trackGeometry: CubeGeometry;
+    var trackMaterial: Physijs.Material;
+    var track: Physijs.Mesh;
+    var respawnGeometry: CubeGeometry;
+    var respawnMaterial: Physijs.Material;
+    var respawn: Physijs.Mesh;
+    
+    var firstAidGeometry: CubeGeometry;
+    var firstAidMaterial: PhongMaterial;
+    var firstAid: Physijs.Mesh;
+    var firstAidTexture: Texture;
+  
+    
+    var cokeGeometry: CylinderGeometry;
+    var cokeMaterial: PhongMaterial;
+    var coke: Physijs.Mesh;
+    var cokeTexture: Texture;
+    
+    var isPassed:boolean;
 
     function init() {
         // Create to HTMLElements
@@ -140,10 +170,10 @@ var game = (() => {
 
         // Spot Light
         spotLight = new SpotLight(0xffffff);
-        spotLight.position.set(20, 40, -15);
+        //spotLight.position.set(20, 40, -15);
         spotLight.castShadow = true;
         spotLight.intensity = 2;
-        spotLight.lookAt(new Vector3(0, 0, 0));
+        //spotLight.lookAt(new Vector3(0, 0, 0));
         spotLight.shadowCameraNear = 2;
         spotLight.shadowCameraFar = 200;
         spotLight.shadowCameraLeft = -5;
@@ -154,24 +184,124 @@ var game = (() => {
         spotLight.shadowMapHeight = 2048;
         spotLight.shadowDarkness = 0.5;
         spotLight.name = "Spot Light";
-        scene.add(spotLight);
+        //scene.add(spotLight);
         console.log("Added spotLight to scene");
-
-        // Burnt Ground
-        groundGeometry = new BoxGeometry(32, 1, 32);
-        groundMaterial = Physijs.createMaterial(new LambertMaterial({ color: 0xe75d14 }), 0.4, 0);
-        ground = new Physijs.ConvexMesh(groundGeometry, groundMaterial, 0);
+        
+        //Set a respawn(test)
+        respawnGeometry = new BoxGeometry(300,0.5,300);
+        respawnMaterial = Physijs.createMaterial(new LambertMaterial({ color: 0x000000 }), 0.4, 0);
+        respawn = new Physijs.ConvexMesh(respawnGeometry, respawnMaterial, 0);
+        respawn.position.set(0,-10,0);
+        respawn.name="Respawn";
+        
+        scene.add(respawn);
+        
+        // Long Track
+        groundTexture = new THREE.TextureLoader().load('../../Assets/images/track.png');
+        groundTexture.wrapS = THREE.RepeatWrapping;
+        groundTexture.wrapT = THREE.RepeatWrapping;
+        groundTexture.repeat.set(8, 8);
+        
+        groundMaterial = new PhongMaterial();
+        groundMaterial.map = groundTexture;
+        
+        groundGeometry = new BoxGeometry(20, 1, 40);
+        groundPhysicsMaterial = Physijs.createMaterial(groundMaterial, 0, 0);
+        ground = new Physijs.ConvexMesh(groundGeometry, groundPhysicsMaterial, 0);
         ground.receiveShadow = true;
         ground.name = "Ground";
         scene.add(ground);
-        console.log("Added Burnt Ground to scene");
-
+        console.log("Added runing track to scene");
+        
+        ground = new Physijs.ConvexMesh(groundGeometry, groundPhysicsMaterial, 0);
+        ground.receiveShadow = true;
+        ground.position.set(21,0,-96);
+        ground.rotation.y = -0.2;
+        ground.name = "Ground";
+        scene.add(ground);
+        console.log("Added runing track to scene");
+        
+        
+        // fence
+        fenceGeometry = new BoxGeometry(1, 5, 40);
+        fenceMaterial = Physijs.createMaterial(new LambertMaterial({ color: 0x000000 }), 0.4, 0);
+        fence = new Physijs.ConvexMesh(fenceGeometry, fenceMaterial, 0);
+        fence.receiveShadow = true;
+        fence.position.set(10,3,0);
+        fence.name = "Fence";
+        scene.add(fence);
+        
+        fence = new Physijs.ConvexMesh(fenceGeometry, fenceMaterial, 0);
+        fence.receiveShadow = true;
+        fence.position.set(-10,3,0);
+        fence.name = "Fence";
+        scene.add(fence);
+        console.log("Added fence to scene");
+        
+        
+        // Small track
+        trackGeometry = new CubeGeometry(20, 1, 15);
+        trackMaterial = Physijs.createMaterial(groundMaterial, 0, 0);
+        track = new Physijs.ConvexMesh(trackGeometry, trackMaterial, 0);
+        track.receiveShadow = true;
+        track.position.set(0.5,0,-32);
+        track.rotation.y = -0.2;
+        track.name = "StoneGround";
+        scene.add(track);
+        console.log("Added small track to scene");        
+        
+        track = new Physijs.ConvexMesh(trackGeometry, trackMaterial, 0);
+        track.receiveShadow = true;
+        track.position.set(7,0,-49);
+        track.rotation.y = -0.2;
+        track.name = "SmallGround";
+        scene.add(track);
+        console.log("Added small track to scene");
+        
+        track = new Physijs.ConvexMesh(trackGeometry, trackMaterial, 0);
+        track.receiveShadow = true;
+        track.position.set(14,0,-66);
+        track.rotation.y = -0.2;
+        track.name = "SmallGroud";
+        scene.add(track);
+        console.log("Added small track to scene");
+        
+        //FirstAidKit
+        firstAidTexture = new THREE.TextureLoader().load('../../Assets/images/firstaid1.png');
+        firstAidTexture.wrapS = THREE.RepeatWrapping;
+        firstAidTexture.wrapT = THREE.RepeatWrapping;
+        firstAidTexture.repeat.set(1, 1);
+                        
+        firstAidGeometry = new BoxGeometry(2, 1, 2);
+        firstAidMaterial = new PhongMaterial( {map: firstAidTexture});
+        firstAid = new Physijs.BoxMesh(firstAidGeometry,firstAidMaterial,1);
+        firstAid.receiveShadow = true;
+        firstAid.position.set(1,10,-35);
+        firstAid.name = "FirstAid";
+        scene.add(firstAid);
+        console.log("Added FirstAid item to scene");
+        
+        //Coke
+        cokeTexture = new THREE.TextureLoader().load('../../Assets/images/coke.png');
+        cokeTexture.wrapS = THREE.RepeatWrapping;
+        cokeTexture.wrapT = THREE.RepeatWrapping;
+        cokeTexture.repeat.set(1, 1);
+        
+        cokeGeometry = new CylinderGeometry(0.2,0.2,0.5,29);
+        cokeMaterial = new PhongMaterial({map:cokeTexture});
+        coke = new Physijs.CylinderMesh(cokeGeometry, cokeMaterial, 1);
+        coke.receiveShadow = true;
+        coke.position.set(3, 4, -15);
+        coke.name = "Coke";
+        scene.add(coke);
+        console.log("Added Coke item to scene");
+        
         // Player Object
-        playerGeometry = new BoxGeometry(2, 4, 2);
+        playerGeometry = new BoxGeometry(2, 3, 2);
         playerMaterial = Physijs.createMaterial(new LambertMaterial({ color: 0x00ff00 }), 0.4, 0);
 
         player = new Physijs.BoxMesh(playerGeometry, playerMaterial, 1);
-        player.position.set(0, 30, 10);
+        player.position.set(0, 20, 0);
         player.receiveShadow = true;
         player.castShadow = true;
         player.name = "Player";
@@ -184,10 +314,33 @@ var game = (() => {
             if (event.name === "Ground") {
                 console.log("player hit the ground");
                 isGrounded = true;
+            }            
+            
+            if (event.name === "Respawn") {
+                isDied = true;
+                console.log("player died");
             }
-            if (event.name === "Sphere") {
-                console.log("player hit the sphere");
+            
+            if (event.name === "Coke") {
+                isDied = true;
+                console.log("Pick up coke item");
             }
+            
+            if (event.name === "FirstAid") {
+                isDied = true;
+                console.log("Pick up FirstAid item");
+            }
+            
+            if (event.name === "StoneGround") {
+                isPassed = true;
+                console.log("test");
+            }
+            
+            if (event.name === "Stone") {
+                isPassed = true;
+                console.log("Stone");
+            }
+            
         });
         
         // Add DirectionLine
@@ -202,18 +355,28 @@ var game = (() => {
         //create parent-child relationship 
         player.add(camera);
         camera.position.set(0, 1, 0);
+        
+        player.add(spotLight);
+        spotLight.position.set(10, 30, -25);
 
-        // Sphere Object
-        sphereGeometry = new SphereGeometry(2, 32, 32);
-        sphereMaterial = Physijs.createMaterial(new LambertMaterial({ color: 0x00ff00 }), 0.4, 0);
-        sphere = new Physijs.SphereMesh(sphereGeometry, sphereMaterial, 1);
-        sphere.position.set(0, 60, 10);
-        sphere.receiveShadow = true;
-        sphere.castShadow = true;
-        sphere.name = "Sphere";
-        //scene.add(sphere);
-        //console.log("Added Sphere to Scene");
-
+        // Stone Object(Test)
+        /*
+        stoneTexture = new THREE.TextureLoader().load('../../Assets/images/stone.jpg');
+        stoneTexture.wrapS = THREE.RepeatWrapping;
+        stoneTexture.wrapT = THREE.RepeatWrapping;
+        stoneTexture.repeat.set(1, 1);
+                
+        stoneGeometry = new SphereGeometry(0.5,5,5);
+        stoneMaterial = new PhongMaterial({map : stoneTexture});
+        stone = new Physijs.SphereMesh(stoneGeometry, stoneMaterial, 1);
+        stone.position.set(4, 60, 10);
+        stone.position.set(Math.random()*18-10, 14, Math.random()*5-49);
+        stone.receiveShadow = true;
+        stone.castShadow = true;
+        stone.name = "Stone";
+        scene.add(stone);
+        console.log("Added Stone to the scene : "+stone.position.z);
+        */
 
         // add controls
         gui = new GUI();
@@ -276,19 +439,29 @@ var game = (() => {
         stats.domElement.style.top = '0px';
         document.body.appendChild(stats.domElement);
     }
+    
+    function respawnPoint():void{
+         player.position.set(0,15,0);
+     }
 
     // Setup main game loop
     function gameLoop(): void {
         stats.update();
 
         checkControls();
-               
+        
+             
+        
         // render using requestAnimationFrame
         requestAnimationFrame(gameLoop);
 
         // render the scene
         renderer.render(scene, camera);
+        
+        
     }
+    
+    
     
     function checkControls():void {
         
@@ -301,19 +474,19 @@ var game = (() => {
             if (isGrounded) {
                 var direction = new Vector3(0,0,0);
                 if (keyboardControls.moveForward) {
-                    velocity.z -= 400.0 * delta;
+                    velocity.z -= 500.0 * delta;
                 }
                 if (keyboardControls.moveLeft) {
-                    velocity.x -= 400.0 * delta;
+                    velocity.x -= 500.0 * delta;
                 }
                 if (keyboardControls.moveBackward) {
-                    velocity.z += 400.0 * delta;
+                    velocity.z += 500.0 * delta;
                 }
                 if (keyboardControls.moveRight) {
-                    velocity.x += 400.0 * delta;
+                    velocity.x += 500.0 * delta;
                 }
                 if (keyboardControls.jump) {
-                    velocity.y += 2000.0 * delta;
+                    velocity.y += 4000.0 * delta;
              
                     if(player.position.y > 4){
                         isGrounded = false;
