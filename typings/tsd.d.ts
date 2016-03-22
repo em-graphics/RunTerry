@@ -1,3 +1,13 @@
+/*
+Source file name : game.ts
+Author : Eunmi Han(300790610)
+Date last Modified : Mar 11, 2016
+Program Description : Main controls 
+Revision History : 1.01 - Initial Setup(3.11) by E
+                   1.02 - Remove gui.dat, project adjustment(3.21)
+                                      
+Last Modified by Eunmi Han
+*/
 
 /// <reference path="threejs/three.d.ts" />
 /// <reference path="stats/stats.d.ts" />
@@ -14,3 +24,8 @@
 /// <reference path="gulp-typescript/gulp-typescript.d.ts" />
 /// <reference path="gulp-sourcemaps/gulp-sourcemaps.d.ts" />
 /// <reference path="physijs/physijs.d.ts" />
+/// <reference path="createjs-lib/createjs-lib.d.ts" />
+/// <reference path="easeljs/easeljs.d.ts" />
+/// <reference path="tweenjs/tweenjs.d.ts" />
+/// <reference path="preloadjs/preloadjs.d.ts" />
+/// <reference path="soundjs/soundjs.d.ts" />

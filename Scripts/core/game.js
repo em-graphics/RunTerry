@@ -6,6 +6,7 @@ Program Description : Main controls
 Revision History : 1.01 - Initial Setup(3.11) by E
                    1.02 - Add mouse controls(3.17) by E
                    1.03 - Add items and texture(3.18)
+                   1.04 - Remove gui.dat, project adjustment(3.21)
                                       
 Last Modified by Eunmi Han
 */
@@ -39,8 +40,6 @@ var Clock = THREE.Clock;
 var PhongMaterial = THREE.MeshPhongMaterial;
 var Texture = THREE.Texture;
 var CylinderGeometry = THREE.CylinderGeometry;
-//Custom Game Objects
-var gameObject = objects.gameObject;
 // Setup a Web Worker for Physijs
 Physijs.scripts.worker = "/Scripts/lib/Physijs/physijs_worker.js";
 Physijs.scripts.ammo = "/Scripts/lib/Physijs/examples/js/ammo.js";
@@ -96,10 +95,55 @@ var game = (function () {
     var coke;
     var cokeTexture;
     var isPassed;
+    // CreateJS Related Variables
+    var assets;
+    var canvas;
+    var stage;
+    var scoreLabel;
+    var livesLabel;
+    var scoreValue;
+    var livesValue;
+    var manifest = [
+        { id: "land", src: "../../Assets/audio/Land.wav" }
+    ];
+    function preload() {
+        assets = new createjs.LoadQueue();
+        assets.installPlugin(createjs.Sound);
+        assets.on("complete", init, this);
+        assets.loadManifest(manifest);
+    }
+    function setupCanvas() {
+        canvas = document.getElementById("canvas");
+        canvas.setAttribute("width", config.Screen.WIDTH.toString());
+        canvas.setAttribute("height", (config.Screen.HEIGHT * 0.1).toString());
+        canvas.style.backgroundColor = "#000000";
+        stage = new createjs.Stage(canvas);
+    }
+    function setupScoreboard() {
+        // initialize  score and lives values
+        scoreValue = 0;
+        livesValue = 5;
+        // Add Lives Label
+        livesLabel = new createjs.Text("LIVES: " + livesValue, "40px Consolas", "#ffffff");
+        livesLabel.x = config.Screen.WIDTH * 0.1;
+        livesLabel.y = (config.Screen.HEIGHT * 0.15) * 0.20;
+        stage.addChild(livesLabel);
+        console.log("Added Lives Label to stage");
+        // Add Score Label
+        scoreLabel = new createjs.Text("SCORE: " + scoreValue, "40px Consolas", "#ffffff");
+        scoreLabel.x = config.Screen.WIDTH * 0.8;
+        scoreLabel.y = (config.Screen.HEIGHT * 0.15) * 0.20;
+        stage.addChild(scoreLabel);
+        console.log("Added Score Label to stage");
+    }
     function init() {
         // Create to HTMLElements
         blocker = document.getElementById("blocker");
         instructions = document.getElementById("instructions");
+        // Set Up CreateJS Canvas and Stage
+        setupCanvas();
+        // Set Up Scoreboard
+        setupScoreboard();
         //check to see if pointerlock is supported
         havePointerLock = 'pointerLockElement' in document ||
             'mozPointerLockElement' in document ||
@@ -350,6 +394,12 @@ var game = (function () {
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
         renderer.setSize(window.innerWidth, window.innerHeight);
+        canvas.style.width = "100%";
+        livesLabel.x = config.Screen.WIDTH * 0.1;
+        livesLabel.y = (config.Screen.HEIGHT * 0.15) * 0.20;
+        scoreLabel.x = config.Screen.WIDTH * 0.8;
+        scoreLabel.y = (config.Screen.HEIGHT * 0.15) * 0.20;
+        stage.update();
     }
     // Add Frame Rate Stats to the Scene
     function addStatsObject() {
@@ -360,13 +410,11 @@ var game = (function () {
         stats.domElement.style.top = '0px';
         document.body.appendChild(stats.domElement);
     }
-    function respawnPoint() {
-        player.position.set(0, 15, 0);
-    }
     // Setup main game loop
     function gameLoop() {
         stats.update();
         checkControls();
+        stage.update();
         // render using requestAnimationFrame
         requestAnimationFrame(gameLoop);
         // render the scene
@@ -440,7 +488,7 @@ var game = (function () {
         //camera.lookAt(new Vector3(0, 0, 0));
         console.log("Finished setting up Camera...");
     }
-    window.onload = init;
+    window.onload = preload;
     return {
         scene: scene
     };

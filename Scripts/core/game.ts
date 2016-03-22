@@ -6,6 +6,7 @@ Program Description : Main controls
 Revision History : 1.01 - Initial Setup(3.11) by E
                    1.02 - Add mouse controls(3.17) by E
                    1.03 - Add items and texture(3.18)
+                   1.04 - Remove gui.dat, project adjustment(3.21)
                                       
 Last Modified by Eunmi Han
 */
@@ -42,8 +43,6 @@ import PhongMaterial = THREE.MeshPhongMaterial;
 import Texture = THREE.Texture;
 import CylinderGeometry = THREE.CylinderGeometry;
 
-//Custom Game Objects
-import gameObject = objects.gameObject;
 
 // Setup a Web Worker for Physijs
 Physijs.scripts.worker = "/Scripts/lib/Physijs/physijs_worker.js";
@@ -107,12 +106,77 @@ var game = (() => {
     var cokeTexture: Texture;
     
     var isPassed:boolean;
+    
+    // CreateJS Related Variables
+    var assets: createjs.LoadQueue;
+    var canvas: HTMLElement;
+    var stage: createjs.Stage;
+    var scoreLabel: createjs.Text;
+    var livesLabel: createjs.Text;
+    var scoreValue: number;
+    var livesValue: number;
 
-    function init() {
+    
+    var manifest = [
+        { id: "land", src: "../../Assets/audio/Land.wav" }
+    ];
+    
+    function preload(): void {
+        assets = new createjs.LoadQueue();
+        assets.installPlugin(createjs.Sound);
+        assets.on("complete", init, this);
+        assets.loadManifest(manifest);
+    }
+    
+    
+    function setupCanvas(): void {
+        canvas = document.getElementById("canvas");
+        canvas.setAttribute("width", config.Screen.WIDTH.toString());
+        canvas.setAttribute("height", (config.Screen.HEIGHT * 0.1).toString());
+        canvas.style.backgroundColor = "#000000";
+        stage = new createjs.Stage(canvas);
+    }
+    
+    function setupScoreboard(): void {
+        // initialize  score and lives values
+        scoreValue = 0;
+        livesValue = 5;
+
+        // Add Lives Label
+        livesLabel = new createjs.Text(
+            "LIVES: " + livesValue,
+            "40px Consolas",
+            "#ffffff"
+        );
+        livesLabel.x = config.Screen.WIDTH * 0.1;
+        livesLabel.y = (config.Screen.HEIGHT * 0.15) * 0.20;
+        stage.addChild(livesLabel);
+        console.log("Added Lives Label to stage");
+
+        // Add Score Label
+        scoreLabel = new createjs.Text(
+            "SCORE: " + scoreValue,
+            "40px Consolas",
+            "#ffffff"
+        );
+        scoreLabel.x = config.Screen.WIDTH * 0.8;
+        scoreLabel.y = (config.Screen.HEIGHT * 0.15) * 0.20;
+        stage.addChild(scoreLabel);
+        console.log("Added Score Label to stage");
+    }
+
+    function init(): void {
         // Create to HTMLElements
         blocker = document.getElementById("blocker");
         instructions = document.getElementById("instructions");
+        
+        // Set Up CreateJS Canvas and Stage
+        setupCanvas();
 
+        // Set Up Scoreboard
+        setupScoreboard();
+
+        
         //check to see if pointerlock is supported
         havePointerLock = 'pointerLockElement' in document ||
             'mozPointerLockElement' in document ||
@@ -415,6 +479,13 @@ var game = (() => {
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
         renderer.setSize(window.innerWidth, window.innerHeight);
+        
+        canvas.style.width = "100%";
+        livesLabel.x = config.Screen.WIDTH * 0.1;
+        livesLabel.y = (config.Screen.HEIGHT * 0.15) * 0.20;
+        scoreLabel.x = config.Screen.WIDTH * 0.8;
+        scoreLabel.y = (config.Screen.HEIGHT * 0.15) * 0.20;
+        stage.update();
     }
 
 
@@ -429,9 +500,6 @@ var game = (() => {
         document.body.appendChild(stats.domElement);
     }
     
-    function respawnPoint():void{
-         player.position.set(0,15,0);
-     }
 
     // Setup main game loop
     function gameLoop(): void {
@@ -439,7 +507,7 @@ var game = (() => {
 
         checkControls();
         
-             
+        stage.update();     
         
         // render using requestAnimationFrame
         requestAnimationFrame(gameLoop);
@@ -533,7 +601,7 @@ var game = (() => {
         console.log("Finished setting up Camera...");
     }
 
-    window.onload = init;
+    window.onload = preload;
 
     return {
         scene: scene
