@@ -7,6 +7,8 @@ Revision History : 1.01 - Initial Setup(3.11) by E
                    1.02 - Add mouse controls(3.17) by E
                    1.03 - Add items and texture(3.18)
                    1.04 - Remove gui.dat, project adjustment(3.21)
+                   1.05 - Add death collision, score board(3.23)
+                   1.06 - Add point light, play again alert and finish line, update items coordinate(3.24)
                                       
 Last Modified by Eunmi Han
 */
@@ -55,6 +57,8 @@ var game = (function () {
     var blocker;
     var instructions;
     var spotLight;
+    var spotLight2;
+    var spotLight3;
     var groundGeometry;
     var groundMaterial;
     var ground;
@@ -64,9 +68,6 @@ var game = (function () {
     var playerGeometry;
     var playerMaterial;
     var player;
-    var fenceGeometry;
-    var fenceMaterial;
-    var fence;
     var keyboardControls;
     var mouseControls;
     var isGrounded;
@@ -79,9 +80,7 @@ var game = (function () {
     var trackGeometry;
     var trackMaterial;
     var track;
-    var respawnGeometry;
-    var respawnMaterial;
-    var respawn;
+    //Item Variables
     var firstAidGeometry;
     var firstAidMaterial;
     var firstAid;
@@ -94,6 +93,19 @@ var game = (function () {
     var stoneMaterial;
     var stoneTexture;
     var stone;
+    var respawnGeometry;
+    var respawnMaterial;
+    var respawn;
+    var respawnTexture;
+    var respawnPhysicsMaterial;
+    var fenceGeometry;
+    var fenceMaterial;
+    var fence;
+    var finishGeometry;
+    var finishMaterial;
+    var finish;
+    var isFinish;
+    var isDied;
     // CreateJS Related Variables
     var assets;
     var canvas;
@@ -123,13 +135,13 @@ var game = (function () {
         scoreValue = 0;
         livesValue = 5;
         // Add Lives Label
-        livesLabel = new createjs.Text("LIVES: " + livesValue, "40px Consolas", "#ffffff");
+        livesLabel = new createjs.Text("LIVES: " + livesValue, "40px Mouse Memoirs", "#ffffff");
         livesLabel.x = config.Screen.WIDTH * 0.1;
         livesLabel.y = (config.Screen.HEIGHT * 0.15) * 0.20;
         stage.addChild(livesLabel);
         console.log("Added Lives Label to stage");
         // Add Score Label
-        scoreLabel = new createjs.Text("SCORE: " + scoreValue, "40px Consolas", "#ffffff");
+        scoreLabel = new createjs.Text("SCORE: " + scoreValue, "40px Mouse Memoirs", "#ffffff");
         scoreLabel.x = config.Screen.WIDTH * 0.8;
         scoreLabel.y = (config.Screen.HEIGHT * 0.15) * 0.20;
         stage.addChild(scoreLabel);
@@ -180,10 +192,10 @@ var game = (function () {
         setupCamera(); // setup the camera
         // Spot Light
         spotLight = new SpotLight(0xffffff);
-        //spotLight.position.set(20, 40, -15);
+        spotLight.position.set(20, 40, -15);
         spotLight.castShadow = true;
         spotLight.intensity = 2;
-        //spotLight.lookAt(new Vector3(0, 0, 0));
+        spotLight.lookAt(new Vector3(0, 0, 0));
         spotLight.shadowCameraNear = 2;
         spotLight.shadowCameraFar = 200;
         spotLight.shadowCameraLeft = -5;
@@ -194,15 +206,54 @@ var game = (function () {
         spotLight.shadowMapHeight = 2048;
         spotLight.shadowDarkness = 0.5;
         spotLight.name = "Spot Light";
-        //scene.add(spotLight);
+        scene.add(spotLight);
+        spotLight2 = new SpotLight(0xffffff);
+        spotLight2.position.set(20, 40, -115);
+        spotLight2.castShadow = true;
+        spotLight2.intensity = 2;
+        spotLight2.lookAt(new Vector3(0, 0, -100));
+        spotLight2.shadowCameraNear = 2;
+        spotLight2.shadowCameraFar = 200;
+        spotLight2.shadowCameraLeft = -5;
+        spotLight2.shadowCameraRight = 5;
+        spotLight2.shadowCameraTop = 5;
+        spotLight2.shadowCameraBottom = -5;
+        spotLight2.shadowMapWidth = 2048;
+        spotLight2.shadowMapHeight = 2048;
+        spotLight2.shadowDarkness = 0.5;
+        spotLight2.name = "Spot Light";
+        scene.add(spotLight2);
+        spotLight3 = new SpotLight(0xffffff);
+        spotLight3.position.set(20, 40, -215);
+        spotLight3.castShadow = true;
+        spotLight3.intensity = 2;
+        spotLight3.lookAt(new Vector3(0, 0, -200));
+        spotLight3.shadowCameraNear = 2;
+        spotLight3.shadowCameraFar = 200;
+        spotLight3.shadowCameraLeft = -5;
+        spotLight3.shadowCameraRight = 5;
+        spotLight3.shadowCameraTop = 5;
+        spotLight3.shadowCameraBottom = -5;
+        spotLight3.shadowMapWidth = 2048;
+        spotLight3.shadowMapHeight = 2048;
+        spotLight3.shadowDarkness = 0.5;
+        spotLight3.name = "Spot Light";
+        scene.add(spotLight3);
         console.log("Added spotLight to scene");
-        //Set a respawn(test)
-        respawnGeometry = new BoxGeometry(300, 0.5, 300);
-        respawnMaterial = Physijs.createMaterial(new LambertMaterial({ color: 0x000000 }), 0.4, 0);
-        respawn = new Physijs.ConvexMesh(respawnGeometry, respawnMaterial, 0);
+        //Set a respawn
+        respawnTexture = new THREE.TextureLoader().load('../../Assets/images/lava.png');
+        respawnTexture.wrapS = THREE.RepeatWrapping;
+        respawnTexture.wrapT = THREE.RepeatWrapping;
+        respawnTexture.repeat.set(8, 8);
+        respawnMaterial = new PhongMaterial();
+        respawnMaterial.map = respawnTexture;
+        respawnGeometry = new BoxGeometry(310, 0.5, 310);
+        respawnPhysicsMaterial = Physijs.createMaterial(respawnMaterial, 0, 0);
+        respawn = new Physijs.ConvexMesh(respawnGeometry, respawnPhysicsMaterial, 0);
         respawn.position.set(0, -10, 0);
         respawn.name = "Respawn";
         scene.add(respawn);
+        console.log("Added Death point to scene");
         // Long Track
         groundTexture = new THREE.TextureLoader().load('../../Assets/images/track.png');
         groundTexture.wrapS = THREE.RepeatWrapping;
@@ -219,11 +270,19 @@ var game = (function () {
         console.log("Added runing track to scene");
         ground = new Physijs.ConvexMesh(groundGeometry, groundPhysicsMaterial, 0);
         ground.receiveShadow = true;
-        ground.position.set(21, 0, -96);
-        ground.rotation.y = -0.2;
+        ground.position.set(0, 1, -104);
         ground.name = "Ground";
         scene.add(ground);
         console.log("Added runing track to scene");
+        //Finish Line
+        finishGeometry = new BoxGeometry(20, 1, 1);
+        finishMaterial = Physijs.createMaterial(new LambertMaterial({ color: 0xffffff }), 0.4, 0);
+        finish = new Physijs.ConvexMesh(finishGeometry, finishMaterial, 0);
+        finish.receiveShadow = true;
+        finish.position.set(0, 3, -120);
+        finish.name = "FinishLine";
+        scene.add(finish);
+        console.log("Added Finish Line to scene");
         // fence
         fenceGeometry = new BoxGeometry(1, 5, 40);
         fenceMaterial = Physijs.createMaterial(new LambertMaterial({ color: 0x000000 }), 0.4, 0);
@@ -243,22 +302,19 @@ var game = (function () {
         trackMaterial = Physijs.createMaterial(groundMaterial, 0, 0);
         track = new Physijs.ConvexMesh(trackGeometry, trackMaterial, 0);
         track.receiveShadow = true;
-        track.position.set(0.5, 0, -32);
-        track.rotation.y = -0.2;
+        track.position.set(0, 1, -34);
         track.name = "Ground";
         scene.add(track);
         console.log("Added small track to scene");
         track = new Physijs.ConvexMesh(trackGeometry, trackMaterial, 0);
         track.receiveShadow = true;
-        track.position.set(7, 0, -49);
-        track.rotation.y = -0.2;
+        track.position.set(0, 0, -53);
         track.name = "StoneGround";
         scene.add(track);
         console.log("Added small track to scene");
         track = new Physijs.ConvexMesh(trackGeometry, trackMaterial, 0);
         track.receiveShadow = true;
-        track.position.set(14, 0, -66);
-        track.rotation.y = -0.2;
+        track.position.set(0, 1, -70);
         track.name = "Ground";
         scene.add(track);
         console.log("Added small track to scene");
@@ -277,15 +333,19 @@ var game = (function () {
         //collision check
         player.addEventListener('collision', function (eventObject) {
             if (eventObject.name === "Ground") {
-                console.log("player hit the ground");
                 isGrounded = true;
             }
             if (eventObject.name === "Respawn") {
                 livesValue--;
                 livesLabel.text = "LIVES: " + livesValue;
-                scene.remove(player);
-                player.position.set(0, 30, 10);
-                scene.add(player);
+                if (livesValue < 1) {
+                    isDied = true;
+                }
+                else {
+                    scene.remove(player);
+                    player.position.set(0, 30, 10);
+                    scene.add(player);
+                }
             }
             if (eventObject.name === "Coke") {
                 scene.remove(eventObject);
@@ -296,17 +356,44 @@ var game = (function () {
             if (eventObject.name === "FirstAid") {
                 scene.remove(eventObject);
                 setFirstAidPosition(eventObject);
-                scoreValue += 80;
+                scoreValue += 20;
                 scoreLabel.text = "SCORE: " + scoreValue;
             }
             if (eventObject.name === "StoneGround") {
+                isGrounded = true;
                 addStoneItem();
+            }
+            if (eventObject.name === "Stone") {
+                livesValue--;
+                livesLabel.text = "LIVES: " + livesValue;
+                if (livesValue < 1) {
+                    isDied = true;
+                }
+                else {
+                    scene.remove(eventObject);
+                    setFirstAidPosition(eventObject);
+                }
+            }
+            if (eventObject.name === "FinishLine") {
+                isFinish = true;
+                scoreValue += 1000;
+                scoreLabel.text = "SCORE: " + scoreValue;
+                playAgain();
+            }
+        });
+        //Collision check between items and death line
+        respawn.addEventListener('collision', function (eventObject) {
+            if (eventObject.name === "Coke") {
+                scene.remove(eventObject);
+                setCokePosition(eventObject);
+            }
+            if (eventObject.name === "FirstAid") {
+                scene.remove(eventObject);
+                setFirstAidPosition(eventObject);
             }
             if (eventObject.name === "Stone") {
                 scene.remove(eventObject);
                 setFirstAidPosition(eventObject);
-                livesValue--;
-                livesLabel.text = "LIVES: " + livesValue;
             }
         });
         // Add DirectionLine
@@ -320,8 +407,6 @@ var game = (function () {
         //create parent-child relationship 
         player.add(camera);
         camera.position.set(0, 1, 0);
-        player.add(spotLight);
-        spotLight.position.set(10, 30, -25);
         // Add framerate stats
         addStatsObject();
         console.log("Added Stats to scene...");
@@ -329,6 +414,28 @@ var game = (function () {
         gameLoop(); // render the scene	
         scene.simulate();
         window.addEventListener('resize', onWindowResize, false);
+    }
+    function playAgain() {
+        var x;
+        if (isFinish) {
+            x = "You won!!!!\n Your score : " + scoreValue + "\n Do you want to play again?";
+            isFinish = false;
+        }
+        else {
+            x = "Do you want to play again?";
+        }
+        if (confirm(x) == true) {
+            livesValue = 5;
+            livesLabel.text = "LIVES: " + livesValue;
+            scoreValue = 0;
+            scoreLabel.text = "SCORE: " + scoreValue;
+            scene.remove(player);
+            player.position.set(0, 30, 10);
+            scene.add(player);
+        }
+        else {
+            scene.remove(player);
+        }
     }
     // Add the FirstAid to the scene
     function addFirstAidItem() {
@@ -340,7 +447,7 @@ var game = (function () {
         firstAidTexture.repeat.set(1, 1);
         firstAidGeometry = new BoxGeometry(2, 1, 2);
         firstAidMaterial = new PhongMaterial({ map: firstAidTexture });
-        for (var count = 0; count < 6; count++) {
+        for (var count = 0; count < 5; count++) {
             firstAid[count] = new Physijs.BoxMesh(firstAidGeometry, firstAidMaterial, 1);
             firstAid[count].receiveShadow = true;
             firstAid[count].castShadow = true;
@@ -352,7 +459,7 @@ var game = (function () {
     // Set FirstAid Position
     function setFirstAidPosition(firstAid) {
         var randomPointX = Math.floor(Math.random() * 20) - 10;
-        var randomPointZ = Math.floor(Math.random() * 20) - 10;
+        var randomPointZ = Math.floor(Math.random() * 5) - 70;
         firstAid.position.set(randomPointX, 10, randomPointZ);
         scene.add(firstAid);
     }
@@ -378,7 +485,7 @@ var game = (function () {
     // Set Coke Position
     function setCokePosition(coke) {
         var randomPointX = Math.floor(Math.random() * 20) - 10;
-        var randomPointZ = Math.floor(Math.random() * 20) - 10;
+        var randomPointZ = Math.floor(Math.random() * 5) - 33;
         coke.position.set(randomPointX, 3, randomPointZ);
         scene.add(coke);
     }
@@ -392,7 +499,7 @@ var game = (function () {
         stoneTexture.repeat.set(1, 1);
         stoneGeometry = new SphereGeometry(0.5, 5, 5);
         stoneMaterial = new PhongMaterial({ map: stoneTexture });
-        for (var count = 0; count < 6; count++) {
+        for (var count = 0; count < 10; count++) {
             stone[count] = new Physijs.BoxMesh(stoneGeometry, stoneMaterial, 1);
             stone[count].receiveShadow = true;
             stone[count].castShadow = true;
@@ -403,8 +510,8 @@ var game = (function () {
     }
     // Set Stone Position
     function setStonePosition(stone) {
-        var randomPointX = Math.floor(Math.random() * 18) - 10;
-        var randomPointZ = Math.floor(Math.random() * 5) - 49;
+        var randomPointX = Math.floor(Math.random() * 20) - 10;
+        var randomPointZ = Math.floor(Math.random() * 5) - 55;
         stone.position.set(randomPointX, 3, randomPointZ);
         scene.add(stone);
     }
@@ -458,6 +565,10 @@ var game = (function () {
         stats.update();
         checkControls();
         stage.update();
+        if (isDied) {
+            playAgain();
+            isDied = false;
+        }
         // render using requestAnimationFrame
         requestAnimationFrame(gameLoop);
         // render the scene
@@ -536,5 +647,4 @@ var game = (function () {
         scene: scene
     };
 })();
-
 //# sourceMappingURL=game.js.map
