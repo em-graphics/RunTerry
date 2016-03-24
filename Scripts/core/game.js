@@ -67,10 +67,6 @@ var game = (function () {
     var fenceGeometry;
     var fenceMaterial;
     var fence;
-    var stoneGeometry;
-    var stoneMaterial;
-    var stoneTexture;
-    var stone;
     var keyboardControls;
     var mouseControls;
     var isGrounded;
@@ -94,7 +90,10 @@ var game = (function () {
     var cokeMaterial;
     var coke;
     var cokeTexture;
-    var isPassed;
+    var stoneGeometry;
+    var stoneMaterial;
+    var stoneTexture;
+    var stone;
     // CreateJS Related Variables
     var assets;
     var canvas;
@@ -246,49 +245,23 @@ var game = (function () {
         track.receiveShadow = true;
         track.position.set(0.5, 0, -32);
         track.rotation.y = -0.2;
-        track.name = "StoneGround";
+        track.name = "Ground";
         scene.add(track);
         console.log("Added small track to scene");
         track = new Physijs.ConvexMesh(trackGeometry, trackMaterial, 0);
         track.receiveShadow = true;
         track.position.set(7, 0, -49);
         track.rotation.y = -0.2;
-        track.name = "SmallGround";
+        track.name = "StoneGround";
         scene.add(track);
         console.log("Added small track to scene");
         track = new Physijs.ConvexMesh(trackGeometry, trackMaterial, 0);
         track.receiveShadow = true;
         track.position.set(14, 0, -66);
         track.rotation.y = -0.2;
-        track.name = "SmallGroud";
+        track.name = "Ground";
         scene.add(track);
         console.log("Added small track to scene");
-        //FirstAidKit
-        firstAidTexture = new THREE.TextureLoader().load('../../Assets/images/firstaid1.png');
-        firstAidTexture.wrapS = THREE.RepeatWrapping;
-        firstAidTexture.wrapT = THREE.RepeatWrapping;
-        firstAidTexture.repeat.set(1, 1);
-        firstAidGeometry = new BoxGeometry(2, 1, 2);
-        firstAidMaterial = new PhongMaterial({ map: firstAidTexture });
-        firstAid = new Physijs.BoxMesh(firstAidGeometry, firstAidMaterial, 1);
-        firstAid.receiveShadow = true;
-        firstAid.position.set(1, 10, -35);
-        firstAid.name = "FirstAid";
-        scene.add(firstAid);
-        console.log("Added FirstAid item to scene");
-        //Coke
-        cokeTexture = new THREE.TextureLoader().load('../../Assets/images/coke.png');
-        cokeTexture.wrapS = THREE.RepeatWrapping;
-        cokeTexture.wrapT = THREE.RepeatWrapping;
-        cokeTexture.repeat.set(1, 1);
-        cokeGeometry = new CylinderGeometry(0.2, 0.2, 0.5, 29);
-        cokeMaterial = new PhongMaterial({ map: cokeTexture });
-        coke = new Physijs.CylinderMesh(cokeGeometry, cokeMaterial, 1);
-        coke.receiveShadow = true;
-        coke.position.set(3, 4, -15);
-        coke.name = "Coke";
-        scene.add(coke);
-        console.log("Added Coke item to scene");
         // Player Object
         playerGeometry = new BoxGeometry(2, 3, 2);
         playerMaterial = Physijs.createMaterial(new LambertMaterial({ color: 0x00ff00 }), 0.4, 0);
@@ -299,31 +272,41 @@ var game = (function () {
         player.name = "Player";
         scene.add(player);
         console.log("Added Player to Scene");
+        addFirstAidItem();
+        addCokeItem();
         //collision check
-        player.addEventListener('collision', function (event) {
-            if (event.name === "Ground") {
+        player.addEventListener('collision', function (eventObject) {
+            if (eventObject.name === "Ground") {
                 console.log("player hit the ground");
                 isGrounded = true;
             }
-            if (event.name === "Respawn") {
-                isDied = true;
-                console.log("player died");
+            if (eventObject.name === "Respawn") {
+                livesValue--;
+                livesLabel.text = "LIVES: " + livesValue;
+                scene.remove(player);
+                player.position.set(0, 30, 10);
+                scene.add(player);
             }
-            if (event.name === "Coke") {
-                isDied = true;
-                console.log("Pick up coke item");
+            if (eventObject.name === "Coke") {
+                scene.remove(eventObject);
+                setCokePosition(eventObject);
+                scoreValue += 50;
+                scoreLabel.text = "SCORE: " + scoreValue;
             }
-            if (event.name === "FirstAid") {
-                isDied = true;
-                console.log("Pick up FirstAid item");
+            if (eventObject.name === "FirstAid") {
+                scene.remove(eventObject);
+                setFirstAidPosition(eventObject);
+                scoreValue += 80;
+                scoreLabel.text = "SCORE: " + scoreValue;
             }
-            if (event.name === "StoneGround") {
-                isPassed = true;
-                console.log("test");
+            if (eventObject.name === "StoneGround") {
+                addStoneItem();
             }
-            if (event.name === "Stone") {
-                isPassed = true;
-                console.log("Stone");
+            if (eventObject.name === "Stone") {
+                scene.remove(eventObject);
+                setFirstAidPosition(eventObject);
+                livesValue--;
+                livesLabel.text = "LIVES: " + livesValue;
             }
         });
         // Add DirectionLine
@@ -339,24 +322,6 @@ var game = (function () {
         camera.position.set(0, 1, 0);
         player.add(spotLight);
         spotLight.position.set(10, 30, -25);
-        // Stone Object(Test)
-        /*
-        stoneTexture = new THREE.TextureLoader().load('../../Assets/images/stone.jpg');
-        stoneTexture.wrapS = THREE.RepeatWrapping;
-        stoneTexture.wrapT = THREE.RepeatWrapping;
-        stoneTexture.repeat.set(1, 1);
-                
-        stoneGeometry = new SphereGeometry(0.5,5,5);
-        stoneMaterial = new PhongMaterial({map : stoneTexture});
-        stone = new Physijs.SphereMesh(stoneGeometry, stoneMaterial, 1);
-        stone.position.set(4, 60, 10);
-        stone.position.set(Math.random()*18-10, 14, Math.random()*5-49);
-        stone.receiveShadow = true;
-        stone.castShadow = true;
-        stone.name = "Stone";
-        scene.add(stone);
-        console.log("Added Stone to the scene : "+stone.position.z);
-        */
         // Add framerate stats
         addStatsObject();
         console.log("Added Stats to scene...");
@@ -364,6 +329,84 @@ var game = (function () {
         gameLoop(); // render the scene	
         scene.simulate();
         window.addEventListener('resize', onWindowResize, false);
+    }
+    // Add the FirstAid to the scene
+    function addFirstAidItem() {
+        //FirstAidKit        
+        firstAid = new Array();
+        firstAidTexture = new THREE.TextureLoader().load('../../Assets/images/firstaid1.png');
+        firstAidTexture.wrapS = THREE.RepeatWrapping;
+        firstAidTexture.wrapT = THREE.RepeatWrapping;
+        firstAidTexture.repeat.set(1, 1);
+        firstAidGeometry = new BoxGeometry(2, 1, 2);
+        firstAidMaterial = new PhongMaterial({ map: firstAidTexture });
+        for (var count = 0; count < 6; count++) {
+            firstAid[count] = new Physijs.BoxMesh(firstAidGeometry, firstAidMaterial, 1);
+            firstAid[count].receiveShadow = true;
+            firstAid[count].castShadow = true;
+            firstAid[count].name = "FirstAid";
+            setFirstAidPosition(firstAid[count]);
+        }
+        console.log("Added FirstAid item to scene");
+    }
+    // Set FirstAid Position
+    function setFirstAidPosition(firstAid) {
+        var randomPointX = Math.floor(Math.random() * 20) - 10;
+        var randomPointZ = Math.floor(Math.random() * 20) - 10;
+        firstAid.position.set(randomPointX, 10, randomPointZ);
+        scene.add(firstAid);
+    }
+    // Add the Coke to the scene
+    function addCokeItem() {
+        //Coke
+        coke = new Array();
+        cokeTexture = new THREE.TextureLoader().load('../../Assets/images/coke.png');
+        cokeTexture.wrapS = THREE.RepeatWrapping;
+        cokeTexture.wrapT = THREE.RepeatWrapping;
+        cokeTexture.repeat.set(1, 1);
+        cokeGeometry = new CylinderGeometry(0.2, 0.2, 0.5, 29);
+        cokeMaterial = new PhongMaterial({ map: cokeTexture });
+        for (var count = 0; count < 6; count++) {
+            coke[count] = new Physijs.BoxMesh(cokeGeometry, cokeMaterial, 1);
+            coke[count].receiveShadow = true;
+            coke[count].castShadow = true;
+            coke[count].name = "Coke";
+            setCokePosition(coke[count]);
+        }
+        console.log("Added Coke item to scene");
+    }
+    // Set Coke Position
+    function setCokePosition(coke) {
+        var randomPointX = Math.floor(Math.random() * 20) - 10;
+        var randomPointZ = Math.floor(Math.random() * 20) - 10;
+        coke.position.set(randomPointX, 3, randomPointZ);
+        scene.add(coke);
+    }
+    // Add the Stone to the scene
+    function addStoneItem() {
+        // Stone       
+        stone = new Array();
+        stoneTexture = new THREE.TextureLoader().load('../../Assets/images/stone.jpg');
+        stoneTexture.wrapS = THREE.RepeatWrapping;
+        stoneTexture.wrapT = THREE.RepeatWrapping;
+        stoneTexture.repeat.set(1, 1);
+        stoneGeometry = new SphereGeometry(0.5, 5, 5);
+        stoneMaterial = new PhongMaterial({ map: stoneTexture });
+        for (var count = 0; count < 6; count++) {
+            stone[count] = new Physijs.BoxMesh(stoneGeometry, stoneMaterial, 1);
+            stone[count].receiveShadow = true;
+            stone[count].castShadow = true;
+            stone[count].name = "Stone";
+            setStonePosition(stone[count]);
+        }
+        console.log("Added Stone item to the scene");
+    }
+    // Set Stone Position
+    function setStonePosition(stone) {
+        var randomPointX = Math.floor(Math.random() * 18) - 10;
+        var randomPointZ = Math.floor(Math.random() * 5) - 49;
+        stone.position.set(randomPointX, 3, randomPointZ);
+        scene.add(stone);
     }
     //PointerLockChange Event Handler
     function pointerLockChange(event) {
