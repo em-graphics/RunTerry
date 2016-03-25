@@ -9,6 +9,7 @@ Revision History : 1.01 - Initial Setup(3.11) by E
                    1.04 - Remove gui.dat, project adjustment(3.21)
                    1.05 - Add death collision, score board(3.23)
                    1.06 - Add point light, play again alert and finish line, update items coordinate(3.24)
+                   1.07 - Add audio sources, update fence from blender(3.24)
                                       
 Last Modified by Eunmi Han
 */
@@ -77,9 +78,6 @@ var game = (function () {
     var directionLineMaterial;
     var directionLineGeometry;
     var directionLine;
-    var trackGeometry;
-    var trackMaterial;
-    var track;
     //Item Variables
     var firstAidGeometry;
     var firstAidMaterial;
@@ -98,14 +96,16 @@ var game = (function () {
     var respawn;
     var respawnTexture;
     var respawnPhysicsMaterial;
-    var fenceGeometry;
-    var fenceMaterial;
-    var fence;
+    var fences;
     var finishGeometry;
     var finishMaterial;
     var finish;
     var isFinish;
     var isDied;
+    var trackGeometry;
+    var trackMaterial;
+    var track;
+    var stoneTrack;
     // CreateJS Related Variables
     var assets;
     var canvas;
@@ -115,7 +115,12 @@ var game = (function () {
     var scoreValue;
     var livesValue;
     var manifest = [
-        { id: "land", src: "../../Assets/audio/Land.wav" }
+        { id: "footstep", src: "../../Assets/audio/Footstep01.wav" },
+        { id: "item", src: "../../Assets/audio/gettingItem.mp3" },
+        { id: "jump", src: "../../Assets/audio/jump.mp3" },
+        { id: "stone", src: "../../Assets/audio/ouch.mp3" },
+        { id: "scream", src: "../../Assets/audio/scream.mp3" },
+        { id: "bgm", src: "../../Assets/audio/bgm.mp3" }
     ];
     function preload() {
         assets = new createjs.LoadQueue();
@@ -270,7 +275,7 @@ var game = (function () {
         console.log("Added runing track to scene");
         ground = new Physijs.ConvexMesh(groundGeometry, groundPhysicsMaterial, 0);
         ground.receiveShadow = true;
-        ground.position.set(0, 1, -104);
+        ground.position.set(0, 1, -102);
         ground.name = "Ground";
         scene.add(ground);
         console.log("Added runing track to scene");
@@ -279,42 +284,48 @@ var game = (function () {
         finishMaterial = Physijs.createMaterial(new LambertMaterial({ color: 0xffffff }), 0.4, 0);
         finish = new Physijs.ConvexMesh(finishGeometry, finishMaterial, 0);
         finish.receiveShadow = true;
-        finish.position.set(0, 3, -120);
+        finish.position.set(0, 3, -119);
         finish.name = "FinishLine";
         scene.add(finish);
         console.log("Added Finish Line to scene");
         // fence
-        fenceGeometry = new BoxGeometry(1, 5, 40);
-        fenceMaterial = Physijs.createMaterial(new LambertMaterial({ color: 0x000000 }), 0.4, 0);
-        fence = new Physijs.ConvexMesh(fenceGeometry, fenceMaterial, 0);
-        fence.receiveShadow = true;
-        fence.position.set(10, 3, 0);
-        fence.name = "Fence";
-        scene.add(fence);
-        fence = new Physijs.ConvexMesh(fenceGeometry, fenceMaterial, 0);
-        fence.receiveShadow = true;
-        fence.position.set(-10, 3, 0);
-        fence.name = "Fence";
-        scene.add(fence);
-        console.log("Added fence to scene");
+        var fenceLoader = new THREE.JSONLoader().load("../../Assets/imported/fence.json", function (geometry) {
+            fences = new Array(); // Instantiate a convex mesh array
+            var phongMaterial = new PhongMaterial({ color: 0x0054ff });
+            phongMaterial.emissive = new THREE.Color(0x0054ff);
+            var fenceMaterial = Physijs.createMaterial(new LambertMaterial({ color: 0x0054ff }), 0.4, 0);
+            for (var count = 0; count < 2; count++) {
+                fences[count] = new Physijs.ConvexMesh(geometry, fenceMaterial, 0);
+                fences[count].receiveShadow = true;
+                fences[count].castShadow = true;
+                fences[count].name = "Fence";
+                if (count == 0) {
+                    fences[count].position.set(10, 1, -17);
+                }
+                else {
+                    fences[count].position.set(-10, 1, -17);
+                }
+                scene.add(fences[count]);
+            }
+        });
         // Small track
         trackGeometry = new CubeGeometry(20, 1, 15);
         trackMaterial = Physijs.createMaterial(groundMaterial, 0, 0);
         track = new Physijs.ConvexMesh(trackGeometry, trackMaterial, 0);
         track.receiveShadow = true;
-        track.position.set(0, 1, -34);
+        track.position.set(0, 1, -32);
         track.name = "Ground";
         scene.add(track);
         console.log("Added small track to scene");
-        track = new Physijs.ConvexMesh(trackGeometry, trackMaterial, 0);
-        track.receiveShadow = true;
-        track.position.set(0, 0, -53);
-        track.name = "StoneGround";
-        scene.add(track);
+        stoneTrack = new Physijs.ConvexMesh(trackGeometry, trackMaterial, 0);
+        stoneTrack.receiveShadow = true;
+        stoneTrack.position.set(0, 0, -52);
+        stoneTrack.name = "StoneGround";
+        scene.add(stoneTrack);
         console.log("Added small track to scene");
         track = new Physijs.ConvexMesh(trackGeometry, trackMaterial, 0);
         track.receiveShadow = true;
-        track.position.set(0, 1, -70);
+        track.position.set(0, 1, -69);
         track.name = "Ground";
         scene.add(track);
         console.log("Added small track to scene");
@@ -330,10 +341,12 @@ var game = (function () {
         console.log("Added Player to Scene");
         addFirstAidItem();
         addCokeItem();
+        addStoneItem();
         //collision check
         player.addEventListener('collision', function (eventObject) {
             if (eventObject.name === "Ground") {
                 isGrounded = true;
+                createjs.Sound.play("footstep");
             }
             if (eventObject.name === "Respawn") {
                 livesValue--;
@@ -343,8 +356,9 @@ var game = (function () {
                 }
                 else {
                     scene.remove(player);
-                    player.position.set(0, 30, 10);
+                    player.position.set(0, 30, 0);
                     scene.add(player);
+                    createjs.Sound.play("scream");
                 }
             }
             if (eventObject.name === "Coke") {
@@ -352,16 +366,17 @@ var game = (function () {
                 setCokePosition(eventObject);
                 scoreValue += 50;
                 scoreLabel.text = "SCORE: " + scoreValue;
+                createjs.Sound.play("item");
             }
             if (eventObject.name === "FirstAid") {
                 scene.remove(eventObject);
                 setFirstAidPosition(eventObject);
                 scoreValue += 20;
                 scoreLabel.text = "SCORE: " + scoreValue;
+                createjs.Sound.play("item");
             }
             if (eventObject.name === "StoneGround") {
                 isGrounded = true;
-                addStoneItem();
             }
             if (eventObject.name === "Stone") {
                 livesValue--;
@@ -373,12 +388,26 @@ var game = (function () {
                     scene.remove(eventObject);
                     setFirstAidPosition(eventObject);
                 }
+                createjs.Sound.play("stone");
             }
             if (eventObject.name === "FinishLine") {
                 isFinish = true;
                 scoreValue += 1000;
                 scoreLabel.text = "SCORE: " + scoreValue;
                 playAgain();
+            }
+        });
+        //Collision check between stone and track
+        stoneTrack.addEventListener('collision', function (eventObject) {
+            if (eventObject.name === "Stone") {
+                scene.remove(eventObject);
+                setStonePosition(eventObject);
+            }
+        });
+        track.addEventListener('collision', function (eventObject) {
+            if (eventObject.name === "Stone") {
+                scene.remove(eventObject);
+                setStonePosition(eventObject);
             }
         });
         //Collision check between items and death line
@@ -413,6 +442,8 @@ var game = (function () {
         document.body.appendChild(renderer.domElement);
         gameLoop(); // render the scene	
         scene.simulate();
+        //background music
+        createjs.Sound.play("bgm", createjs.Sound.INTERRUPT_NONE, 0, 0, -1, 1, 0);
         window.addEventListener('resize', onWindowResize, false);
     }
     function playAgain() {
@@ -425,16 +456,10 @@ var game = (function () {
             x = "Do you want to play again?";
         }
         if (confirm(x) == true) {
-            livesValue = 5;
-            livesLabel.text = "LIVES: " + livesValue;
-            scoreValue = 0;
-            scoreLabel.text = "SCORE: " + scoreValue;
-            scene.remove(player);
-            player.position.set(0, 30, 10);
-            scene.add(player);
+            location.reload();
         }
         else {
-            scene.remove(player);
+            location.reload();
         }
     }
     // Add the FirstAid to the scene
@@ -459,7 +484,7 @@ var game = (function () {
     // Set FirstAid Position
     function setFirstAidPosition(firstAid) {
         var randomPointX = Math.floor(Math.random() * 20) - 10;
-        var randomPointZ = Math.floor(Math.random() * 5) - 70;
+        var randomPointZ = Math.floor(Math.random() * 5) - 68;
         firstAid.position.set(randomPointX, 10, randomPointZ);
         scene.add(firstAid);
     }
@@ -486,7 +511,7 @@ var game = (function () {
     function setCokePosition(coke) {
         var randomPointX = Math.floor(Math.random() * 20) - 10;
         var randomPointZ = Math.floor(Math.random() * 5) - 33;
-        coke.position.set(randomPointX, 3, randomPointZ);
+        coke.position.set(randomPointX, 7, randomPointZ);
         scene.add(coke);
     }
     // Add the Stone to the scene
@@ -499,7 +524,7 @@ var game = (function () {
         stoneTexture.repeat.set(1, 1);
         stoneGeometry = new SphereGeometry(0.5, 5, 5);
         stoneMaterial = new PhongMaterial({ map: stoneTexture });
-        for (var count = 0; count < 10; count++) {
+        for (var count = 0; count < 7; count++) {
             stone[count] = new Physijs.BoxMesh(stoneGeometry, stoneMaterial, 1);
             stone[count].receiveShadow = true;
             stone[count].castShadow = true;
@@ -511,8 +536,8 @@ var game = (function () {
     // Set Stone Position
     function setStonePosition(stone) {
         var randomPointX = Math.floor(Math.random() * 20) - 10;
-        var randomPointZ = Math.floor(Math.random() * 5) - 55;
-        stone.position.set(randomPointX, 3, randomPointZ);
+        var randomPointZ = Math.floor(Math.random() * 5) - 53;
+        stone.position.set(randomPointX, 10, randomPointZ);
         scene.add(stone);
     }
     //PointerLockChange Event Handler
@@ -597,6 +622,7 @@ var game = (function () {
                     velocity.y += 4000.0 * delta;
                     if (player.position.y > 4) {
                         isGrounded = false;
+                        createjs.Sound.play("jump");
                     }
                 }
                 player.setDamping(0.7, 0.1);
